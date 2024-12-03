@@ -217,19 +217,19 @@ public class FsStoryTellerAsyncDriver implements StoryTellerAsyncDriver<FsDevice
 
         return readPackIndex()
                 .thenApply(packUUIDs -> {
-                    try {
-                        LOGGER.debug("Number of packs in index: {}", packUUIDs.size());
-                        List<FsStoryPackInfos> packs = new ArrayList<>();
-                        for (UUID packUUID : packUUIDs) {
-                            FsStoryPackInfos packInfos = new FsStoryPackInfos();
-                            packInfos.setUuid(packUUID);
-                            LOGGER.debug("Pack UUID: {}", packUUID);
+                    LOGGER.debug("Number of packs in index: {}", packUUIDs.size());
+                    List<FsStoryPackInfos> packs = new ArrayList<>();
+                    for (UUID packUUID : packUUIDs) {
+                        FsStoryPackInfos packInfos = new FsStoryPackInfos();
+                        packInfos.setUuid(packUUID);
+                        LOGGER.debug("Pack UUID: {}", packUUID);
 
-                            // Compute .content folder (last 4 bytes of UUID)
-                            String folderName = transformUuid(packUUID.toString());
-                            Path packPath = this.partitionMountPoint.resolve(CONTENT_FOLDER).resolve(folderName);
-                            packInfos.setFolderName(folderName);
+                        // Compute .content folder (last 4 bytes of UUID)
+                        String folderName = transformUuid(packUUID.toString());
+                        Path packPath = this.partitionMountPoint.resolve(CONTENT_FOLDER).resolve(folderName);
+                        packInfos.setFolderName(folderName);
 
+                        try {
                             // Open 'ni' file
                             Path niPath = packPath.resolve(NODE_INDEX_FILENAME);
                             try (InputStream niDis = new BufferedInputStream(Files.newInputStream(niPath))) {
@@ -244,11 +244,12 @@ public class FsStoryTellerAsyncDriver implements StoryTellerAsyncDriver<FsDevice
                             packInfos.setSizeInBytes(FileUtils.getFolderSize(packPath));
 
                             packs.add(packInfos);
+                        } catch (IOException e) {
+                            LOGGER.error("Failed to read pack metadata on device partition: {}", e.getMessage());
+                            // throw new StoryTellerException("Failed to read pack metadata on device partition", e);
                         }
-                        return packs;
-                    } catch (IOException e) {
-                        throw new StoryTellerException("Failed to read pack metadata on device partition", e);
                     }
+                    return packs;
                 });
     }
 
